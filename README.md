@@ -1,2 +1,2 @@
 # HomeScreenDemo
-![alt tag](http://imgur.com/u1ZZUWQ)
+![alt tag](http://i.imgur.com/u1ZZUWQ.gif)
