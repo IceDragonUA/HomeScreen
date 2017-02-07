@@ -8,6 +8,6 @@ ViewHolders of delegates are simple ItemsView wich can be scroll left-right.
 
 Main idea = RecyclerViews (HORIZONTAL SCROLL) as ViewHolders in BaseRecyclerView (VERTICAL SCROLL)
 
-AWAVE: Tested only on mobile platform (don't contain logic of selection (ViewHolders of BaseRecyclerView)). Can contains focus issue for STB. As suggestion for scrolling up-down need request focus on BaseRecyclerView, for scrolling left-right need request focus on ViewHolder of BaseRecyclerView.
+AWARE: Tested only on mobile platform (don't contain logic of selection (ViewHolders of BaseRecyclerView)). Can contains focus issue for STB. As suggestion for scrolling up-down need request focus on BaseRecyclerView, for scrolling left-right need request focus on ViewHolder of BaseRecyclerView.
 
 ![alt tag](http://i.imgur.com/u1ZZUWQ.gif)
