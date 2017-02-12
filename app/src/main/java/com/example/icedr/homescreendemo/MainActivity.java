@@ -1,46 +1,60 @@
 package com.example.icedr.homescreendemo;
 
-import android.content.pm.ActivityInfo;
+import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 
-import com.example.icedr.homescreendemo.delegates.HomeCategory1;
-import com.example.icedr.homescreendemo.delegates.HomeCategory2;
-import com.example.icedr.homescreendemo.delegates.HomeCategory3;
+import com.example.icedr.homescreendemo.dao.DataDao;
+import com.example.icedr.homescreendemo.model.Project;
+import com.example.icedr.homescreendemo.network.IDataLoadingResult;
+import com.example.icedr.homescreendemo.widget.HomeCategoriesAdapter;
+import com.example.icedr.homescreendemo.widget.managers.SmoothScrolledLayoutManager;
 
-import butterknife.Bind;
+import java.util.List;
+
+import butterknife.BindView;
 import butterknife.ButterKnife;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
-    protected View mRootView;
-
-    @Bind(R.id.browse_list)
+    @BindView(R.id.browse_list)
     RecyclerView browseList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
-        setContentView(R.layout.activity_main);
-        mRootView = findViewById(R.id.activity_main);
-        ButterKnife.bind(this, mRootView);
-        browseList.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
-        CompositeAdapter mainAdapter = new CompositeAdapter.Builder()
-                .addAdapter(new HomeCategory3(this))
-                .addAdapter(new HomeCategory1(this))
-                .addAdapter(new HomeCategory2(this))
-                .addAdapter(new HomeCategory3(this))
-                .addAdapter(new HomeCategory1(this))
-                .addAdapter(new HomeCategory2(this))
-                .addAdapter(new HomeCategory3(this))
-                .addAdapter(new HomeCategory1(this))
-                .addAdapter(new HomeCategory2(this))
-                .build();
-        browseList.setAdapter(mainAdapter);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN
+        );
+        setContentView(R.layout.category_component);
+        ButterKnife.bind(this);
+        loadProjects();
+    }
+
+    private void loadProjects() {
+        DataDao.getInstance().getProjects(new IDataLoadingResult<List<Project>>() {
+            @Override
+            public void onResult(List<Project> projectList) {
+                projectList.remove(0);
+                browseList.setLayoutManager(new SmoothScrolledLayoutManager(MainActivity.this, LinearLayoutManager.VERTICAL, false));
+                browseList.setAdapter(new HomeCategoriesAdapter(MainActivity.this, projectList));
+            }
+
+            @Override
+            public void onFailure(Throwable ex) {
+                Intent intentError = new Intent(MainActivity.this, ErrorActivity.class);
+                intentError.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                intentError.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                intentError.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+                startActivity(intentError);
+            }
+        });
     }
 }
