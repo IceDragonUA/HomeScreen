@@ -87,12 +87,15 @@ public class HomeCategoryAdapter extends RecyclerView.Adapter<HomeCategoryAdapte
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        return new HomeCategoryAdapter.ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.category_view, parent, false));
+        ViewHolder viewHolder = new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.category_view, parent, false));
+        viewHolder.itemView.setZ(0);
+        return viewHolder;
     }
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         holder.itemView.setSelected(categoryListView.hasFocus() && selectedItemPosition == position);
+        holder.itemView.setZ(selectedItemPosition == position ? 1 : 0);
         holder.bind(context, getItem(position));
         holder.handleScaleChanging(categoryListView.hasFocus() && selectedItemPosition == position);
     }
