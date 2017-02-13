@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="offset">60dp</dimen>
+    <dimen name="parent_offset">45dp</dimen>
+    <dimen name="child_offset">60dp</dimen>
     <dimen name="defaultWidth">220dp</dimen>
     <dimen name="defaultHeight">120dp</dimen>
     <dimen name="scaledHeight">12dp</dimen>

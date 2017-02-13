@@ -3,7 +3,6 @@ package com.example.icedr.homescreendemo;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.Window;
 import android.view.WindowManager;
@@ -12,7 +11,7 @@ import com.example.icedr.homescreendemo.dao.DataDao;
 import com.example.icedr.homescreendemo.model.Project;
 import com.example.icedr.homescreendemo.network.IDataLoadingResult;
 import com.example.icedr.homescreendemo.widget.HomeCategoriesAdapter;
-import com.example.icedr.homescreendemo.widget.managers.SmoothScrolledLayoutManager;
+import com.example.icedr.homescreendemo.widget.managers.VerticalSmoothScrolledLayoutManager;
 
 import java.util.List;
 
@@ -43,7 +42,10 @@ public class MainActivity extends Activity {
             @Override
             public void onResult(List<Project> projectList) {
                 projectList.remove(0);
-                browseList.setLayoutManager(new SmoothScrolledLayoutManager(MainActivity.this, LinearLayoutManager.VERTICAL, false));
+                browseList.setLayoutManager(new VerticalSmoothScrolledLayoutManager(MainActivity.this));
+                browseList.setHasFixedSize(true);
+                browseList.setItemAnimator(null);
+                browseList.setNestedScrollingEnabled(false);
                 browseList.setAdapter(new HomeCategoriesAdapter(MainActivity.this, projectList));
             }
 

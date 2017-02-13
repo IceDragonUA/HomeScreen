@@ -4,7 +4,7 @@ import android.animation.Animator;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Context;
-import android.support.v7.widget.LinearLayoutManager;
+import android.os.Handler;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -36,11 +36,30 @@ public class HomeCategoryAdapter extends RecyclerView.Adapter<HomeCategoryAdapte
     private static final String TAG = HomeCategoryAdapter.class.getCanonicalName();
 
     private Context context;
-    private List<Asset> assetList = new ArrayList<>();
+
     private RecyclerView browseListView;
     private RecyclerView categoryListView;
+
     private int browseListPosition = 0;
     private int selectedItemPosition = 0;
+
+    private List<Asset> assetList = new ArrayList<>();
+
+    private Handler mHandler = new Handler();
+
+    private Runnable mActionLeft = new Runnable() {
+        @Override public void run() {
+            if (selectedItemPosition != 0)
+                moveSelector(Motion.LEFT);
+        }
+    };
+
+    private Runnable mActionRight = new Runnable() {
+        @Override public void run() {
+            if (selectedItemPosition != getItemCount() - 1)
+                moveSelector(Motion.RIGHT);
+        }
+    };
 
     private View.OnFocusChangeListener onFocusChangeListener = new View.OnFocusChangeListener() {
         @Override
@@ -52,19 +71,32 @@ public class HomeCategoryAdapter extends RecyclerView.Adapter<HomeCategoryAdapte
     private View.OnKeyListener onKeyListener = new View.OnKeyListener() {
         @Override
         public boolean onKey(View view, int keyCode, KeyEvent event) {
-            if (event.getAction() == KeyEvent.ACTION_UP) return false;
-            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+
+            if (event.getAction() == KeyEvent.ACTION_UP) {
                 if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
-                    moveSelector((LinearLayoutManager) categoryListView.getLayoutManager(), Motion.LEFT, false);
+                    mHandler.removeCallbacks(mActionLeft);
+                    mHandler.postDelayed(mActionLeft, 250);
                     return true;
                 } else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                    moveSelector((LinearLayoutManager) categoryListView.getLayoutManager(), Motion.RIGHT, false);
+                    mHandler.removeCallbacks(mActionRight);
+                    mHandler.postDelayed(mActionRight, 250);
+                    return true;
+                }
+                return false;
+            }
+
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                    // TODO: 13.02.2017 implement scrolling selection logic
+                    return true;
+                } else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                    // TODO: 13.02.2017 implement scrolling selection logic
                     return true;
                 } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-                    ((HomeCategoriesAdapter) browseListView.getAdapter()).moveSelector((LinearLayoutManager) browseListView.getLayoutManager(), browseListPosition, Motion.UP);
+                    ((HomeCategoriesAdapter) browseListView.getAdapter()).moveSelector(browseListPosition, Motion.UP);
                     return true;
                 } else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
-                    ((HomeCategoriesAdapter) browseListView.getAdapter()).moveSelector((LinearLayoutManager) browseListView.getLayoutManager(), browseListPosition, Motion.DOWN);
+                    ((HomeCategoriesAdapter) browseListView.getAdapter()).moveSelector(browseListPosition, Motion.DOWN);
                     return true;
                 }
             }
@@ -100,68 +132,16 @@ public class HomeCategoryAdapter extends RecyclerView.Adapter<HomeCategoryAdapte
         holder.handleScaleChanging(categoryListView.hasFocus() && selectedItemPosition == position);
     }
 
-    private void moveSelector(LinearLayoutManager layoutManager, int direction, boolean cycled) {
+    private void moveSelector(int direction) {
         try {
             int oldSelectedItemPosition = selectedItemPosition;
-            selectedItemPosition = cycled ?
-                    (((selectedItemPosition + direction) >= 0 && (selectedItemPosition + direction) < getItemCount()) ? selectedItemPosition + direction : direction == Motion.LEFT ? getItemCount() - 1 : 0) :
-                    (selectedItemPosition + direction < 0 ? 0 : selectedItemPosition + direction > getItemCount() - 1 ? getItemCount() - 1 : selectedItemPosition + direction);
-            scrollToPositionWithOffset(layoutManager, selectedItemPosition, oldSelectedItemPosition, direction);
+            selectedItemPosition = selectedItemPosition + direction < 0 ? 0 : selectedItemPosition + direction > getItemCount() - 1 ? getItemCount() - 1 : selectedItemPosition + direction;
+            this.notifyItemChanged(oldSelectedItemPosition);
+            categoryListView.smoothScrollToPosition(selectedItemPosition);
+            this.notifyItemChanged(selectedItemPosition);
         } catch (Exception e) {
             Log.e(TAG, "scrollToPositionWithOffset: Motion - skipped", e);
         }
-    }
-
-    private void scrollToPositionWithOffset(LinearLayoutManager layoutManager, int selectedItemPosition, int oldSelectedItemPosition, int direction) {
-        switch (direction) {
-            case Motion.LEFT:
-                if ((layoutManager.findFirstCompletelyVisibleItemPosition() == selectedItemPosition || layoutManager.findFirstVisibleItemPosition() == selectedItemPosition) &&
-                        layoutManager.findFirstVisibleItemPosition() != 0) {
-                    motionByDirectionWithOffset(
-                            layoutManager,
-                            selectedItemPosition,
-                            oldSelectedItemPosition,
-                            getOffsetDimension());
-                } else {
-                    motionByDirection(
-                            layoutManager,
-                            selectedItemPosition,
-                            oldSelectedItemPosition);
-                    if (layoutManager.findFirstVisibleItemPosition() > selectedItemPosition)
-                        categoryListView.scrollBy(-getOffsetDimension(), 0);
-                }
-                break;
-            case Motion.RIGHT:
-                if ((layoutManager.findLastCompletelyVisibleItemPosition() == selectedItemPosition || layoutManager.findLastVisibleItemPosition() == selectedItemPosition) &&
-                        layoutManager.findLastVisibleItemPosition() != getItemCount() - 1) {
-                    motionByDirectionWithOffset(
-                            layoutManager,
-                            selectedItemPosition,
-                            oldSelectedItemPosition,
-                            categoryListView.getWidth() - categoryListView.findViewHolderForAdapterPosition(selectedItemPosition).itemView.getWidth() - getOffsetDimension());
-                } else {
-                    motionByDirection(layoutManager, selectedItemPosition, oldSelectedItemPosition);
-                    if (layoutManager.findLastVisibleItemPosition() < selectedItemPosition)
-                        categoryListView.scrollBy(getOffsetDimension(), 0);
-                }
-                break;
-        }
-    }
-
-    private void motionByDirection(LinearLayoutManager layoutManager, int selectedItemPosition, int oldSelectedItemPosition) {
-        this.notifyItemChanged(oldSelectedItemPosition);
-        layoutManager.scrollToPosition(selectedItemPosition);
-        this.notifyItemChanged(selectedItemPosition);
-    }
-
-    private void motionByDirectionWithOffset(LinearLayoutManager layoutManager, int selectedItemPosition, int oldSelectedItemPosition, int offsetDimension) {
-        this.notifyItemChanged(oldSelectedItemPosition);
-        layoutManager.scrollToPositionWithOffset(selectedItemPosition, offsetDimension);
-        this.notifyItemChanged(selectedItemPosition);
-    }
-
-    private int getOffsetDimension() {
-        return (int) context.getResources().getDimension(R.dimen.offset);
     }
 
     public void swapData(List<Asset> assetList, int position) {
@@ -286,8 +266,8 @@ public class HomeCategoryAdapter extends RecyclerView.Adapter<HomeCategoryAdapte
         private void doAnimation(final Animator.AnimatorListener animatorListener) {
             scaleXY = new AnimatorSet();
             scaleXY.playTogether(
-                    ObjectAnimator.ofFloat(itemRootView, ViewGroup.SCALE_X, 1f, 1.2f),
-                    ObjectAnimator.ofFloat(itemRootView, ViewGroup.SCALE_Y, 1f, 1.2f)
+                    ObjectAnimator.ofFloat(itemRootView, ViewGroup.SCALE_X, 1f, 1.05f),
+                    ObjectAnimator.ofFloat(itemRootView, ViewGroup.SCALE_Y, 1f, 1.05f)
             );
             scaleXY.setDuration(169);
             scaleXY.setInterpolator(new LinearInterpolator());
