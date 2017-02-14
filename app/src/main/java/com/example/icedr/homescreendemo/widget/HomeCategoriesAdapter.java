@@ -62,8 +62,8 @@ public class HomeCategoriesAdapter extends RecyclerView.Adapter<HomeCategoriesAd
     public void moveSelector(int selectedItemPosition, int direction) {
         try {
             selectedItemPosition = (selectedItemPosition + direction < 0 ? 0 : selectedItemPosition + direction > getItemCount() - 1 ? getItemCount() - 1 : selectedItemPosition + direction);
-            browseListView.findViewHolderForAdapterPosition(selectedItemPosition).itemView.requestFocus();
             browseListView.smoothScrollToPosition(selectedItemPosition);
+            browseListView.findViewHolderForAdapterPosition(selectedItemPosition).itemView.requestFocus();
         } catch (Exception e) {
             Log.e(TAG, "scrollToPositionWithOffset: Motion - skipped", e);
         }
