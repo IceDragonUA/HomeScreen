@@ -1,8 +1,5 @@
 package com.example.icedr.homescreendemo.widget.categories;
 
-import android.animation.Animator;
-import android.animation.AnimatorSet;
-import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.os.Handler;
 import android.support.v7.widget.RecyclerView;
@@ -11,7 +8,6 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 
@@ -64,7 +60,7 @@ public class HomeCategoryAdapter extends RecyclerView.Adapter<HomeCategoryAdapte
     private View.OnFocusChangeListener onFocusChangeListener = new View.OnFocusChangeListener() {
         @Override
         public void onFocusChange(View view, boolean focused) {
-            notifyDataSetChanged();
+//            notifyDataSetChanged();
         }
     };
 
@@ -112,24 +108,19 @@ public class HomeCategoryAdapter extends RecyclerView.Adapter<HomeCategoryAdapte
     @Override
     public void onAttachedToRecyclerView(final RecyclerView recyclerView) {
         super.onAttachedToRecyclerView(recyclerView);
-        recyclerView.setOnKeyListener(onKeyListener);
-        recyclerView.setOnFocusChangeListener(onFocusChangeListener);
+//        recyclerView.setOnKeyListener(onKeyListener);
+//        recyclerView.setOnFocusChangeListener(onFocusChangeListener);
         this.categoryListView = recyclerView;
     }
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        ViewHolder viewHolder = new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.category_view, parent, false));
-        viewHolder.itemView.setZ(0);
-        return viewHolder;
+        return new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.category_view, parent, false));
     }
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        holder.itemView.setSelected(categoryListView.hasFocus() && selectedItemPosition == position);
-        holder.itemView.setZ(selectedItemPosition == position ? 1 : 0);
         holder.bind(context, getItem(position));
-        holder.handleScaleChanging(categoryListView.hasFocus() && selectedItemPosition == position);
     }
 
     private void moveSelector(int direction) {
@@ -160,29 +151,7 @@ public class HomeCategoryAdapter extends RecyclerView.Adapter<HomeCategoryAdapte
         return assetList.size();
     }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
-
-        private AnimatorSet scaleXY;
-
-        private Runnable mScaleToBigSize = new Runnable() {
-            @Override
-            public void run() {
-                if (scaleXY != null) {
-                    if (scaleXY.isRunning()) {
-                        return;
-                    }
-                }
-                showScalingAnimation();
-            }
-        };
-
-        private Runnable mScaleToSmallSize = new Runnable() {
-            @Override
-            public void run() {
-                itemRootView.setScaleX(1f);
-                itemRootView.setScaleY(1f);
-            }
-        };
+    public static class ViewHolder extends RecyclerView.ViewHolder {
 
         @BindView(R.id.item)
         ImageView itemCoverView;
@@ -190,11 +159,8 @@ public class HomeCategoryAdapter extends RecyclerView.Adapter<HomeCategoryAdapte
         @BindView(R.id.progress)
         ProgressBar itemProgressView;
 
-        private View itemRootView;
-
         ViewHolder(View itemRootView) {
             super(itemRootView);
-            this.itemRootView = itemRootView;
             ButterKnife.bind(this, itemRootView);
         }
 
@@ -219,60 +185,6 @@ public class HomeCategoryAdapter extends RecyclerView.Adapter<HomeCategoryAdapte
                         }
                     })
                     .into(itemCoverView);
-        }
-
-        void handleScaleChanging(boolean selected) {
-            if (selected) {
-                itemRootView.removeCallbacks(mScaleToBigSize);
-                itemRootView.post(mScaleToBigSize);
-            } else {
-                itemRootView.removeCallbacks(mScaleToBigSize);
-                if (scaleXY != null) {
-                    scaleXY.cancel();
-                    scaleXY = null;
-                }
-                itemRootView.post(mScaleToSmallSize);
-            }
-        }
-
-        private void showScalingAnimation() {
-            if (!itemRootView.isSelected()) {
-                Log.d(TAG, "showScalingAnimation: " + "Not selected. Skip scaling");
-                return;
-            }
-
-            doAnimation(new Animator.AnimatorListener() {
-                @Override
-                public void onAnimationStart(Animator animation) {
-                    Log.d(TAG, "onAnimationStart - Scaling");
-                }
-
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    Log.d(TAG, "onAnimationEnd - Scaling");
-                    scaleXY = null;
-                }
-
-                @Override
-                public void onAnimationCancel(Animator animation) {
-                }
-
-                @Override
-                public void onAnimationRepeat(Animator animation) {
-                }
-            });
-        }
-
-        private void doAnimation(final Animator.AnimatorListener animatorListener) {
-            scaleXY = new AnimatorSet();
-            scaleXY.playTogether(
-                    ObjectAnimator.ofFloat(itemRootView, ViewGroup.SCALE_X, 1f, 1.05f),
-                    ObjectAnimator.ofFloat(itemRootView, ViewGroup.SCALE_Y, 1f, 1.05f)
-            );
-            scaleXY.setDuration(169);
-            scaleXY.setInterpolator(new LinearInterpolator());
-            scaleXY.addListener(animatorListener);
-            scaleXY.start();
         }
     }
 }

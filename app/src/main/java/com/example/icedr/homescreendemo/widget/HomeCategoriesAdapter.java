@@ -1,6 +1,5 @@
 package com.example.icedr.homescreendemo.widget;
 
-import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -14,9 +13,6 @@ import com.example.icedr.homescreendemo.model.Asset;
 import com.example.icedr.homescreendemo.model.AssetType;
 import com.example.icedr.homescreendemo.model.Project;
 import com.example.icedr.homescreendemo.network.IDataLoadingResult;
-import com.example.icedr.homescreendemo.widget.categories.HomeCategoryAdapter;
-import com.example.icedr.homescreendemo.widget.decorators.StartEndOffsetItemDecoration;
-import com.example.icedr.homescreendemo.widget.managers.HorizontalSmoothScrolledLayoutManager;
 
 import java.util.List;
 
@@ -27,12 +23,10 @@ public class HomeCategoriesAdapter extends RecyclerView.Adapter<HomeCategoriesAd
 
     private static final String TAG = HomeCategoriesAdapter.class.getCanonicalName();
 
-    private Context context;
     private List<Project> projectList;
     private RecyclerView browseListView;
 
-    public HomeCategoriesAdapter(Context context, List<Project> projectList) {
-        this.context = context;
+    public HomeCategoriesAdapter(List<Project> projectList) {
         this.projectList = projectList;
     }
 
@@ -44,14 +38,7 @@ public class HomeCategoriesAdapter extends RecyclerView.Adapter<HomeCategoriesAd
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        ViewHolder viewHolder = new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.category_module, parent, false));
-        viewHolder.categoryListView.setLayoutManager(new HorizontalSmoothScrolledLayoutManager(parent.getContext()));
-        viewHolder.categoryListView.addItemDecoration(new StartEndOffsetItemDecoration((int) context.getResources().getDimension(R.dimen.child_offset)));
-        viewHolder.categoryListView.setAdapter(new HomeCategoryAdapter(parent.getContext(), browseListView));
-        viewHolder.categoryListView.setHasFixedSize(true);
-        viewHolder.categoryListView.setAnimation(null);
-        viewHolder.categoryListView.setNestedScrollingEnabled(false);
-        return viewHolder;
+        return new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.category_module, parent, false));
     }
 
     @Override
@@ -84,7 +71,7 @@ public class HomeCategoriesAdapter extends RecyclerView.Adapter<HomeCategoriesAd
         TextView title;
 
         @BindView(R.id.list_item)
-        RecyclerView categoryListView;
+        RowRecyclerView categoryListView;
 
         ViewHolder(View itemRootView) {
             super(itemRootView);
@@ -96,7 +83,7 @@ public class HomeCategoriesAdapter extends RecyclerView.Adapter<HomeCategoriesAd
             DataDao.getInstance().getAssetsByProjectId(project.getProjectId(), AssetType.IMAGE, new IDataLoadingResult<List<Asset>>() {
                 @Override
                 public void onResult(List<Asset> result) {
-                    ((HomeCategoryAdapter) categoryListView.getAdapter()).swapData(result, position);
+                    categoryListView.getAdapter().swapData(result, position);
                 }
 
                 @Override

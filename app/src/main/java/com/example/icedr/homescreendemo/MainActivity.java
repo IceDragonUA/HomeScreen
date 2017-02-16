@@ -46,7 +46,7 @@ public class MainActivity extends Activity {
                 browseList.setHasFixedSize(true);
                 browseList.setItemAnimator(null);
                 browseList.setNestedScrollingEnabled(false);
-                browseList.setAdapter(new HomeCategoriesAdapter(MainActivity.this, projectList));
+                browseList.setAdapter(new HomeCategoriesAdapter(projectList));
             }
 
             @Override
