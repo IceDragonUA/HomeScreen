@@ -1,17 +1,17 @@
 package com.example.icedr.homescreendemo;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.Window;
 import android.view.WindowManager;
 
 import com.example.icedr.homescreendemo.dao.DataDao;
 import com.example.icedr.homescreendemo.model.Project;
 import com.example.icedr.homescreendemo.network.IDataLoadingResult;
-import com.example.icedr.homescreendemo.widget.HomeCategoriesAdapter;
-import com.example.icedr.homescreendemo.widget.managers.VerticalSmoothScrolledLayoutManager;
+import com.example.icedr.homescreendemo.widget.category.GridRecyclerView;
+import com.example.icedr.homescreendemo.widget.category.HomeCategoriesAdapter;
+import com.example.icedr.homescreendemo.widget.interfaces.OnItemPressedListener;
 
 import java.util.List;
 
@@ -21,8 +21,17 @@ import butterknife.ButterKnife;
 
 public class MainActivity extends Activity {
 
+    private static final String TAG = MainActivity.class.getCanonicalName();
+
     @BindView(R.id.browse_list)
-    RecyclerView browseList;
+    GridRecyclerView browseList;
+
+    private OnItemPressedListener onItemPressedListener = new OnItemPressedListener() {
+        @Override
+        public void onItemPressed(int positionX, int positionY) {
+            Log.e(TAG, "onItemPressed: X = " + positionX + "; Y = " + positionY +";");
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,20 +51,14 @@ public class MainActivity extends Activity {
             @Override
             public void onResult(List<Project> projectList) {
                 projectList.remove(0);
-                browseList.setLayoutManager(new VerticalSmoothScrolledLayoutManager(MainActivity.this));
-                browseList.setHasFixedSize(true);
-                browseList.setItemAnimator(null);
-                browseList.setNestedScrollingEnabled(false);
-                browseList.setAdapter(new HomeCategoriesAdapter(projectList));
+                browseList.createCoordinator(projectList.subList(0, 15));
+                browseList.setAdapter(new HomeCategoriesAdapter(projectList.subList(0, 15)));
+                browseList.getAdapter().setOnItemPressedListener(onItemPressedListener);
             }
 
             @Override
             public void onFailure(Throwable ex) {
-                Intent intentError = new Intent(MainActivity.this, ErrorActivity.class);
-                intentError.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                intentError.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                intentError.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-                startActivity(intentError);
+                Log.e(TAG, "onFailure: ProjectList not loaded", ex);
             }
         });
     }

@@ -1,4 +1,4 @@
-package com.example.icedr.homescreendemo.widget;
+package com.example.icedr.homescreendemo.widget.category;
 
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -13,6 +13,9 @@ import com.example.icedr.homescreendemo.model.Asset;
 import com.example.icedr.homescreendemo.model.AssetType;
 import com.example.icedr.homescreendemo.model.Project;
 import com.example.icedr.homescreendemo.network.IDataLoadingResult;
+import com.example.icedr.homescreendemo.widget.categories.HomeCategoryAdapter;
+import com.example.icedr.homescreendemo.widget.categories.RowRecyclerView;
+import com.example.icedr.homescreendemo.widget.interfaces.OnItemPressedListener;
 
 import java.util.List;
 
@@ -24,7 +27,8 @@ public class HomeCategoriesAdapter extends RecyclerView.Adapter<HomeCategoriesAd
     private static final String TAG = HomeCategoriesAdapter.class.getCanonicalName();
 
     private List<Project> projectList;
-    private RecyclerView browseListView;
+    private GridRecyclerView browseListView;
+    private OnItemPressedListener mOnItemPressedListener;
 
     public HomeCategoriesAdapter(List<Project> projectList) {
         this.projectList = projectList;
@@ -33,27 +37,26 @@ public class HomeCategoriesAdapter extends RecyclerView.Adapter<HomeCategoriesAd
     @Override
     public void onAttachedToRecyclerView(RecyclerView recyclerView) {
         super.onAttachedToRecyclerView(recyclerView);
-        this.browseListView = recyclerView;
+        this.browseListView = (GridRecyclerView) recyclerView;
     }
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        return new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.category_module, parent, false));
+        ViewHolder viewHolder = new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.category_module, parent, false));
+        viewHolder.categoryListView.setOnItemPressedListener(mOnItemPressedListener);
+        viewHolder.categoryListView.setAdapter(new HomeCategoryAdapter(parent.getContext(), browseListView));
+        return viewHolder;
     }
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
+        holder.categoryListView.setSelectedPosition(browseListView.getItemPosition(position));
+        holder.categoryListView.scrollToPosition(browseListView.getItemPosition(position));
         holder.bind(getItem(position), position);
     }
 
-    public void moveSelector(int selectedItemPosition, int direction) {
-        try {
-            selectedItemPosition = (selectedItemPosition + direction < 0 ? 0 : selectedItemPosition + direction > getItemCount() - 1 ? getItemCount() - 1 : selectedItemPosition + direction);
-            browseListView.smoothScrollToPosition(selectedItemPosition);
-            browseListView.findViewHolderForAdapterPosition(selectedItemPosition).itemView.requestFocus();
-        } catch (Exception e) {
-            Log.e(TAG, "scrollToPositionWithOffset: Motion - skipped", e);
-        }
+    public void setOnItemPressedListener(OnItemPressedListener onItemPressedListener) {
+        this.mOnItemPressedListener = onItemPressedListener;
     }
 
     private Project getItem(int position) {

@@ -1,6 +1,4 @@
 <resources>
     <string name="app_name">HomeScreenDemo</string>
-    <string name="category">Category:</string>
-    <string name="connection_lost">Connection lost</string>
     <string name="image_of_asset">Image of asset</string>
 </resources>
