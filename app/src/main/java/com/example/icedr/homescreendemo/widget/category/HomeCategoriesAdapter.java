@@ -51,7 +51,6 @@ public class HomeCategoriesAdapter extends RecyclerView.Adapter<HomeCategoriesAd
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         holder.categoryListView.setSelectedPosition(browseListView.getItemPosition(position));
-        holder.categoryListView.scrollToPosition(browseListView.getItemPosition(position));
         holder.bind(getItem(position), position);
     }
 

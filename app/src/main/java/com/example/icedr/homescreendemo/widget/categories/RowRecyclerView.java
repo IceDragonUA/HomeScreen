@@ -3,14 +3,13 @@ package com.example.icedr.homescreendemo.widget.categories;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Context;
-import android.graphics.PointF;
 import android.graphics.Rect;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.LinearSmoothScroller;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
-import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,9 +26,24 @@ public class RowRecyclerView extends RecyclerView {
 
     private static final String TAG = RowRecyclerView.class.getCanonicalName();
 
+    private static final int MILLISECONDS_PER_EVENT = 250;
+
+    private static final int VELOCITY_START_POINT = 300;
+    private static final float VELOCITY_MAX_SPEED = 0.85f;
+
     private final int mParentStartEndOffset;
 
     private int mSelectedPosition = 0;
+
+    private boolean mMotionMode;
+    private boolean mMotionDirection;
+
+    private int mDigitalFilter = 0;
+
+    private long mCurrentEventTime;
+    private long mLastEventTime;
+
+    private boolean mBlocker;
 
     private OnItemPressedListener mOnItemPressedListener;
 
@@ -41,22 +55,37 @@ public class RowRecyclerView extends RecyclerView {
         switch (keyCode) {
             case KeyEvent.KEYCODE_DPAD_LEFT:
                 if (mSelectedPosition + Motion.LEFT >= 0) {
-                    if (getScrollState() == RecyclerView.SCROLL_STATE_IDLE) scaleToSmallSize();
-                    if (event.getRepeatCount() == 0){
-                        smoothScrollToPositionByDirection(Motion.LEFT);
-                    } else {
-                        // TODO: 18.02.2017 implement logic of scrolling
-                    }
+                    mCurrentEventTime = System.currentTimeMillis();
+                    if (mCurrentEventTime - mLastEventTime > MILLISECONDS_PER_EVENT) {
+                        mLastEventTime = mCurrentEventTime;
+                        if (getScrollState() == RecyclerView.SCROLL_STATE_IDLE) scaleToSmallSize();
+                        if (event.getRepeatCount() == 0 || (getLayoutManager().findFirstCompletelyVisibleItemPosition() == 0 &&
+                                getLayoutManager().findLastCompletelyVisibleItemPosition() == getAdapter().getItemCount() - 1)) {
+                            smoothScrollToPositionByDirection(Motion.LEFT);
+                        } else {
+                            mDigitalFilter = getDigitalFilter(mDigitalFilter, Motion.LEFT);
+                            fling(Motion.LEFT * mDigitalFilter, 0);
+                        }
+                        mBlocker = true;
+                    } else mBlocker = false;
                 }
                 break;
             case KeyEvent.KEYCODE_DPAD_RIGHT:
                 if (mSelectedPosition + Motion.RIGHT < getAdapter().getItemCount()) {
-                    if (getScrollState() == RecyclerView.SCROLL_STATE_IDLE) scaleToSmallSize();
-                    if (event.getRepeatCount() == 0){
-                        smoothScrollToPositionByDirection(Motion.RIGHT);
-                    } else {
-                        // TODO: 18.02.2017 implement logic of scrolling
-                    }
+                    mCurrentEventTime = System.currentTimeMillis();
+                    if (mCurrentEventTime - mLastEventTime > MILLISECONDS_PER_EVENT) {
+                        mLastEventTime = mCurrentEventTime;
+                        if (getScrollState() == RecyclerView.SCROLL_STATE_IDLE) scaleToSmallSize();
+                        if (event.getRepeatCount() == 0 || (getLayoutManager().findFirstCompletelyVisibleItemPosition() == 0 &&
+                                getLayoutManager().findLastCompletelyVisibleItemPosition() == getAdapter().getItemCount() - 1)) {
+                            smoothScrollToPositionByDirection(Motion.RIGHT);
+                            if (mSelectedPosition == getAdapter().getItemCount() - 1) setSelectedView(mSelectedPosition);
+                        } else {
+                            mDigitalFilter = getDigitalFilter(mDigitalFilter, Motion.RIGHT);
+                            fling(Motion.RIGHT * mDigitalFilter, 0);
+                        }
+                        mBlocker = true;
+                    } else mBlocker = false;
                 }
                 break;
             case KeyEvent.KEYCODE_DPAD_UP:
@@ -81,10 +110,18 @@ public class RowRecyclerView extends RecyclerView {
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         switch (keyCode) {
             case KeyEvent.KEYCODE_DPAD_LEFT:
-                if (getScrollState() == RecyclerView.SCROLL_STATE_IDLE) setSelectedPosition();
+                mDigitalFilter = 0;
+                if (mBlocker) {
+                    if (getScrollState() == RecyclerView.SCROLL_STATE_IDLE)
+                        setSelectedView(mSelectedPosition);
+                }
                 break;
             case KeyEvent.KEYCODE_DPAD_RIGHT:
-                if (getScrollState() == RecyclerView.SCROLL_STATE_IDLE) setSelectedPosition();
+                mDigitalFilter = 0;
+                if (mBlocker) {
+                    if (getScrollState() == RecyclerView.SCROLL_STATE_IDLE)
+                        setSelectedView(mSelectedPosition);
+                }
                 break;
             case KeyEvent.KEYCODE_DPAD_CENTER:
                 if (mOnItemPressedListener != null)
@@ -139,11 +176,22 @@ public class RowRecyclerView extends RecyclerView {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
-                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                if (newState == RecyclerView.SCROLL_STATE_IDLE && (mDigitalFilter == 0 ||
+                        getLayoutManager().findFirstCompletelyVisibleItemPosition() == 0 ||
+                        getLayoutManager().findLastCompletelyVisibleItemPosition() == getAdapter().getItemCount() - 1)) {
                     postOnAnimationDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            setSelectedPosition();
+                            mSelectedPosition = mMotionDirection ?
+                                    (mMotionMode ? getLayoutManager().findFirstVisibleItemPosition() : getLayoutManager().findFirstCompletelyVisibleItemPosition()) :
+                                    (mMotionMode ? getLayoutManager().findLastVisibleItemPosition() : getLayoutManager().findLastCompletelyVisibleItemPosition());
+
+                            if (mMotionMode) {
+                                mMotionMode = false;
+                                smoothScrollToPosition(mSelectedPosition);
+                            } else {
+                                setSelectedView(mSelectedPosition);
+                            }
                         }
                     }, 10);
                 } else scaleToSmallSize();
@@ -218,6 +266,7 @@ public class RowRecyclerView extends RecyclerView {
         } else {
             setSelectedView(mSelectedPosition);
         }
+        Log.e(TAG, "onKeyUp: SELECTING");
     }
 
     private View getSelectedView() {
@@ -237,11 +286,18 @@ public class RowRecyclerView extends RecyclerView {
         }
     }
 
-    @Deprecated
+    private int getDigitalFilter(int pastDigitalFilter, int direction) {
+        mMotionMode = true;
+        mMotionDirection = direction == Motion.LEFT;
+        return (int) Math.floor(VELOCITY_START_POINT + VELOCITY_MAX_SPEED * pastDigitalFilter);
+    }
+
     private void smoothScrollToPositionByDirection(int direction) {
         if (mSelectedPosition + direction < 0 || mSelectedPosition + direction > getAdapter().getItemCount() - 1) {
             return;
         }
+        mMotionMode = false;
+        mMotionDirection = direction == Motion.LEFT;
         mSelectedPosition = mSelectedPosition + direction;
         smoothScrollToPosition(mSelectedPosition);
     }
@@ -268,10 +324,7 @@ public class RowRecyclerView extends RecyclerView {
         }
     }
 
-    @Deprecated
     private class HorizontalSmoothScrolledLayoutManager extends LinearLayoutManager {
-
-        private static final float MILLISECONDS_PER_INCH = 20f;
 
         private final Context mContext;
         private final int mParentStartEndOffset;
@@ -280,7 +333,6 @@ public class RowRecyclerView extends RecyclerView {
             super(context, LinearLayoutManager.HORIZONTAL, false);
             this.mContext = context;
             this.mParentStartEndOffset = parentOffset;
-
         }
 
         @Override
@@ -289,16 +341,6 @@ public class RowRecyclerView extends RecyclerView {
                                            int position) {
 
             LinearSmoothScroller smoothScroller = new LinearSmoothScroller(mContext) {
-
-                @Override
-                public PointF computeScrollVectorForPosition(int targetPosition) {
-                    return HorizontalSmoothScrolledLayoutManager.this.computeScrollVectorForPosition(targetPosition);
-                }
-
-                @Override
-                protected float calculateSpeedPerPixel(DisplayMetrics displayMetrics) {
-                    return MILLISECONDS_PER_INCH / displayMetrics.densityDpi;
-                }
 
                 @Override
                 public int calculateDxToMakeVisible(View view, int snapPreference) {

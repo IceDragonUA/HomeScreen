@@ -1,13 +1,11 @@
 package com.example.icedr.homescreendemo.widget.category;
 
 import android.content.Context;
-import android.graphics.PointF;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.LinearSmoothScroller;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
-import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.View;
 
@@ -22,7 +20,22 @@ public class GridRecyclerView extends RecyclerView {
 
     private static final String TAG = GridRecyclerView.class.getCanonicalName();
 
+    private static final int MILLISECONDS_PER_EVENT = 150;
+
+    private static final int VELOCITY_START_POINT = 300;
+    private static final float VELOCITY_MAX_SPEED = 0.85f;
+
     private int mSelectedPosition = 0;
+
+    private boolean mMotionMode;
+    private boolean mMotionDirection;
+
+    private int mDigitalFilter = 0;
+
+    private long mCurrentEventTime;
+    private long mLastEventTime;
+
+    private boolean mBlocker;
 
     private ArrayList<Integer> mCoordinator = new ArrayList<>();
 
@@ -31,20 +44,35 @@ public class GridRecyclerView extends RecyclerView {
         switch (keyCode) {
             case KeyEvent.KEYCODE_DPAD_UP:
                 if (mSelectedPosition + Motion.UP >= 0) {
-                    if (event.getRepeatCount() == 0){
-                        smoothScrollToPositionByDirection(Motion.UP);
-                    } else {
-                        // TODO: 18.02.2017 implement logic of scrolling
-                    }
+                    mCurrentEventTime = System.currentTimeMillis();
+                    if (mCurrentEventTime - mLastEventTime > MILLISECONDS_PER_EVENT) {
+                        mLastEventTime = mCurrentEventTime;
+                        if (event.getRepeatCount() == 0 || (getLayoutManager().findFirstCompletelyVisibleItemPosition() == 0 &&
+                                getLayoutManager().findLastCompletelyVisibleItemPosition() == getAdapter().getItemCount() - 1)) {
+                            smoothScrollToPositionByDirection(Motion.UP);
+                        } else {
+                            mDigitalFilter = getDigitalFilter(mDigitalFilter, Motion.UP);
+                            fling(0, Motion.UP * mDigitalFilter);
+                        }
+                        mBlocker = true;
+                    } else mBlocker = false;
                 }
                 break;
             case KeyEvent.KEYCODE_DPAD_DOWN:
                 if (mSelectedPosition + Motion.DOWN < getAdapter().getItemCount()) {
-                    if (event.getRepeatCount() == 0){
-                        smoothScrollToPositionByDirection(Motion.DOWN);
-                    } else {
-                        // TODO: 18.02.2017 implement logic of scrolling
-                    }
+                    mCurrentEventTime = System.currentTimeMillis();
+                    if (mCurrentEventTime - mLastEventTime > MILLISECONDS_PER_EVENT) {
+                        mLastEventTime = mCurrentEventTime;
+                        if (event.getRepeatCount() == 0 || (getLayoutManager().findFirstCompletelyVisibleItemPosition() == 0 &&
+                                getLayoutManager().findLastCompletelyVisibleItemPosition() == getAdapter().getItemCount() - 1)) {
+                            smoothScrollToPositionByDirection(Motion.DOWN);
+                            if (mSelectedPosition == getAdapter().getItemCount() - 1) setSelectedView(mSelectedPosition);
+                        } else {
+                            mDigitalFilter = getDigitalFilter(mDigitalFilter, Motion.DOWN);
+                            fling(0, Motion.DOWN * mDigitalFilter);
+                        }
+                        mBlocker = true;
+                    } else mBlocker = false;
                 }
                 break;
         }
@@ -55,10 +83,16 @@ public class GridRecyclerView extends RecyclerView {
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         switch (keyCode) {
             case KeyEvent.KEYCODE_DPAD_UP:
-                if (getScrollState() == RecyclerView.SCROLL_STATE_IDLE) setSelectedPosition();
+                mDigitalFilter = 0;
+                if (mBlocker) {
+                    if (getScrollState() == RecyclerView.SCROLL_STATE_IDLE) setSelectedView(mSelectedPosition);
+                }
                 break;
             case KeyEvent.KEYCODE_DPAD_DOWN:
-                if (getScrollState() == RecyclerView.SCROLL_STATE_IDLE) setSelectedPosition();
+                mDigitalFilter = 0;
+                if (mBlocker) {
+                    if (getScrollState() == RecyclerView.SCROLL_STATE_IDLE) setSelectedView(mSelectedPosition);
+                }
                 break;
         }
         return super.onKeyUp(keyCode, event);
@@ -82,11 +116,22 @@ public class GridRecyclerView extends RecyclerView {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
                 super.onScrollStateChanged(recyclerView, newState);
-                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                if (newState == RecyclerView.SCROLL_STATE_IDLE && (mDigitalFilter == 0 ||
+                        getLayoutManager().findFirstCompletelyVisibleItemPosition() == 0 ||
+                        getLayoutManager().findLastCompletelyVisibleItemPosition() == getAdapter().getItemCount() - 1)) {
                     postOnAnimationDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            setSelectedPosition();
+                            mSelectedPosition = mMotionDirection ?
+                                    (mMotionMode ? getLayoutManager().findFirstVisibleItemPosition() : getLayoutManager().findFirstCompletelyVisibleItemPosition()) :
+                                    (mMotionMode ? getLayoutManager().findLastVisibleItemPosition() : getLayoutManager().findLastCompletelyVisibleItemPosition());
+
+                            if (mMotionMode) {
+                                mMotionMode = false;
+                                smoothScrollToPosition(mSelectedPosition);
+                            } else {
+                                setSelectedView(mSelectedPosition);
+                            }
                         }
                     }, 10);
                 }
@@ -104,29 +149,6 @@ public class GridRecyclerView extends RecyclerView {
         return (HomeCategoriesAdapter) super.getAdapter();
     }
 
-    private void setSelectedPosition() {
-        int itemPosition = 0;
-        int minimaxCriterion = Integer.MAX_VALUE;
-
-        for (int position = getLayoutManager().findFirstCompletelyVisibleItemPosition(); position <= getLayoutManager().findLastCompletelyVisibleItemPosition(); position++) {
-            int differencePositions = Math.abs(position - mSelectedPosition);
-            if (differencePositions < minimaxCriterion) {
-                minimaxCriterion = differencePositions;
-                itemPosition = position;
-            }
-        }
-
-        if (minimaxCriterion != 0) {
-            if (itemPosition == getLayoutManager().findFirstCompletelyVisibleItemPosition()) {
-                setSelectedView(getLayoutManager().findFirstCompletelyVisibleItemPosition());
-            } else if (itemPosition == getLayoutManager().findLastCompletelyVisibleItemPosition()) {
-                setSelectedView(getLayoutManager().findLastCompletelyVisibleItemPosition());
-            }
-        } else {
-            setSelectedView(mSelectedPosition);
-        }
-    }
-
     private void setSelectedView(int selectedPosition) {
         final HomeCategoriesAdapter.ViewHolder viewHolder = (HomeCategoriesAdapter.ViewHolder) findViewHolderForAdapterPosition(selectedPosition);
         if (viewHolder != null) {
@@ -135,11 +157,18 @@ public class GridRecyclerView extends RecyclerView {
         }
     }
 
-    @Deprecated
+    private int getDigitalFilter(int pastDigitalFilter, int direction) {
+        mMotionMode = true;
+        mMotionDirection = direction == Motion.LEFT;
+        return (int) Math.floor(VELOCITY_START_POINT + VELOCITY_MAX_SPEED * pastDigitalFilter);
+    }
+
     private void smoothScrollToPositionByDirection(int direction) {
         if (mSelectedPosition + direction < 0 || mSelectedPosition + direction > getAdapter().getItemCount() - 1) {
             return;
         }
+        mMotionMode = false;
+        mMotionDirection = direction == Motion.LEFT;
         mSelectedPosition = mSelectedPosition + direction;
         smoothScrollToPosition(mSelectedPosition);
     }
@@ -149,6 +178,7 @@ public class GridRecyclerView extends RecyclerView {
             mCoordinator.add(0);
         }
     }
+
     public int getItemPosition (int rowPosition) {
         return mCoordinator.get(rowPosition);
     }
@@ -157,10 +187,7 @@ public class GridRecyclerView extends RecyclerView {
         mCoordinator.set(rowPosition, itemPosition);
     }
 
-    @Deprecated
     private class VerticalSmoothScrolledLayoutManager extends LinearLayoutManager {
-
-        private static final float MILLISECONDS_PER_INCH = 50f;
 
         private final Context mContext;
         private final int mParentStartEndOffset;
@@ -177,16 +204,6 @@ public class GridRecyclerView extends RecyclerView {
                                            int position) {
 
             LinearSmoothScroller smoothScroller = new LinearSmoothScroller(mContext) {
-
-                @Override
-                public PointF computeScrollVectorForPosition(int targetPosition) {
-                    return VerticalSmoothScrolledLayoutManager.this.computeScrollVectorForPosition(targetPosition);
-                }
-
-                @Override
-                protected float calculateSpeedPerPixel(DisplayMetrics displayMetrics) {
-                    return MILLISECONDS_PER_INCH / displayMetrics.densityDpi;
-                }
 
                 @Override
                 public int calculateDyToMakeVisible(View view, int snapPreference) {
