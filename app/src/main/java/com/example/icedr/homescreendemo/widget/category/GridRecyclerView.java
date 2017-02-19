@@ -149,7 +149,7 @@ public class GridRecyclerView extends RecyclerView {
         return (HomeCategoriesAdapter) super.getAdapter();
     }
 
-    private void setSelectedView(int selectedPosition) {
+    public void setSelectedView(int selectedPosition) {
         final HomeCategoriesAdapter.ViewHolder viewHolder = (HomeCategoriesAdapter.ViewHolder) findViewHolderForAdapterPosition(selectedPosition);
         if (viewHolder != null) {
             viewHolder.itemView.requestFocus();
