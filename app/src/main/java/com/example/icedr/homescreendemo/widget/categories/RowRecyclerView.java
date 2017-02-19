@@ -9,7 +9,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.LinearSmoothScroller;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -266,7 +265,6 @@ public class RowRecyclerView extends RecyclerView {
         } else {
             setSelectedView(mSelectedPosition);
         }
-        Log.e(TAG, "onKeyUp: SELECTING");
     }
 
     private View getSelectedView() {
