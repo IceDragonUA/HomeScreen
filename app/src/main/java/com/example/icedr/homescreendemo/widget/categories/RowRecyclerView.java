@@ -3,12 +3,14 @@ package com.example.icedr.homescreendemo.widget.categories;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Context;
+import android.graphics.PointF;
 import android.graphics.Rect;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.LinearSmoothScroller;
 import android.support.v7.widget.RecyclerView;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,6 +38,8 @@ public class RowRecyclerView extends RecyclerView {
 
     private boolean mMotionMode;
     private boolean mMotionDirection;
+
+    private boolean isAnimationEnabled = true;
 
     private int mDigitalFilter = 0;
 
@@ -78,7 +82,8 @@ public class RowRecyclerView extends RecyclerView {
                         if (event.getRepeatCount() == 0 || (getLayoutManager().findFirstCompletelyVisibleItemPosition() == 0 &&
                                 getLayoutManager().findLastCompletelyVisibleItemPosition() == getAdapter().getItemCount() - 1)) {
                             smoothScrollToPositionByDirection(Motion.RIGHT);
-                            if (mSelectedPosition == getAdapter().getItemCount() - 1) setSelectedView(mSelectedPosition);
+                            if (mSelectedPosition == getAdapter().getItemCount() - 1)
+                                setSelectedView(mSelectedPosition);
                         } else {
                             mDigitalFilter = getDigitalFilter(mDigitalFilter, Motion.RIGHT);
                             fling(Motion.RIGHT * mDigitalFilter, 0);
@@ -88,14 +93,14 @@ public class RowRecyclerView extends RecyclerView {
                 }
                 break;
             case KeyEvent.KEYCODE_DPAD_UP:
-                if (getAdapter().getBrowseListPosition() + Motion.UP >= 0) {
+                if (event.getRepeatCount() > 0 && getAdapter().getBrowseListPosition() + Motion.UP >= 0) {
                     scaleToSmallSize();
                 }
                 getAdapter().getBrowseListView().setItemPosition(getAdapter().getBrowseListPosition(), mSelectedPosition);
                 getAdapter().getBrowseListView().onKeyDown(keyCode, event);
                 break;
             case KeyEvent.KEYCODE_DPAD_DOWN:
-                if (getAdapter().getBrowseListPosition() + Motion.DOWN < getAdapter().getBrowseListView().getAdapter().getItemCount()) {
+                if (event.getRepeatCount() > 0 && getAdapter().getBrowseListPosition() + Motion.DOWN < getAdapter().getBrowseListView().getAdapter().getItemCount()) {
                     scaleToSmallSize();
                 }
                 getAdapter().getBrowseListView().setItemPosition(getAdapter().getBrowseListPosition(), mSelectedPosition);
@@ -178,22 +183,31 @@ public class RowRecyclerView extends RecyclerView {
                 if (newState == RecyclerView.SCROLL_STATE_IDLE && (mDigitalFilter == 0 ||
                         getLayoutManager().findFirstCompletelyVisibleItemPosition() == 0 ||
                         getLayoutManager().findLastCompletelyVisibleItemPosition() == getAdapter().getItemCount() - 1)) {
-                    postOnAnimationDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            mSelectedPosition = mMotionDirection ?
-                                    (mMotionMode ? getLayoutManager().findFirstVisibleItemPosition() : getLayoutManager().findFirstCompletelyVisibleItemPosition()) :
-                                    (mMotionMode ? getLayoutManager().findLastVisibleItemPosition() : getLayoutManager().findLastCompletelyVisibleItemPosition());
+                    if (isAnimationEnabled) {
+                        postOnAnimationDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                mSelectedPosition = mMotionDirection ?
+                                        (mMotionMode ? getLayoutManager().findFirstVisibleItemPosition() : getLayoutManager().findFirstCompletelyVisibleItemPosition()) :
+                                        (mMotionMode ? getLayoutManager().findLastVisibleItemPosition() : getLayoutManager().findLastCompletelyVisibleItemPosition());
 
-                            if (mMotionMode) {
-                                mMotionMode = false;
-                                smoothScrollToPosition(mSelectedPosition);
-                            } else {
-                                setSelectedView(mSelectedPosition);
+                                if (mMotionMode) {
+                                    mMotionMode = false;
+                                    smoothScrollToPosition(mSelectedPosition);
+                                } else {
+                                    setSelectedView(mSelectedPosition);
+                                }
                             }
-                        }
-                    }, 10);
+                        }, 10);
+                    } else isAnimationEnabled = true;
                 } else scaleToSmallSize();
+
+            }
+        });
+        setOnFocusChangeListener(new OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View view, boolean hasFocus) {
+                if (!hasFocus) scaleToSmallSize();
             }
         });
     }
@@ -322,7 +336,7 @@ public class RowRecyclerView extends RecyclerView {
         }
     }
 
-    private class HorizontalSmoothScrolledLayoutManager extends LinearLayoutManager {
+    public class HorizontalSmoothScrolledLayoutManager extends LinearLayoutManager {
 
         private final Context mContext;
         private final int mParentStartEndOffset;
@@ -338,7 +352,51 @@ public class RowRecyclerView extends RecyclerView {
                                            RecyclerView.State state,
                                            int position) {
 
+            if (position < 0 || position >= getItemCount()) {
+                return;
+            }
+
             LinearSmoothScroller smoothScroller = new LinearSmoothScroller(mContext) {
+
+                @Override
+                public int calculateDxToMakeVisible(View view, int snapPreference) {
+                    final RecyclerView.LayoutManager layoutManager = getLayoutManager();
+                    if (layoutManager == null || !layoutManager.canScrollHorizontally()) {
+                        return 0;
+                    }
+                    final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) view.getLayoutParams();
+                    final int left = layoutManager.getDecoratedLeft(view) - params.leftMargin;
+                    final int right = layoutManager.getDecoratedRight(view) + params.rightMargin;
+                    final int start = layoutManager.getPaddingLeft() + mParentStartEndOffset;
+                    final int end = layoutManager.getWidth() - layoutManager.getPaddingRight() - mParentStartEndOffset;
+                    return calculateDtToFit(left, right, start, end, snapPreference);
+                }
+            };
+
+            smoothScroller.setTargetPosition(position);
+            startSmoothScroll(smoothScroller);
+        }
+
+        @Override
+        public void scrollToPosition(int position) {
+
+            if (position < 0 || position >= getItemCount()) {
+                return;
+            }
+
+            isAnimationEnabled = false;
+
+            LinearSmoothScroller smoothScroller = new LinearSmoothScroller(mContext) {
+
+                @Override
+                public PointF computeScrollVectorForPosition(int targetPosition) {
+                    return HorizontalSmoothScrolledLayoutManager.this.computeScrollVectorForPosition(targetPosition);
+                }
+
+                @Override
+                protected float calculateSpeedPerPixel(DisplayMetrics displayMetrics) {
+                    return 1f / displayMetrics.densityDpi;
+                }
 
                 @Override
                 public int calculateDxToMakeVisible(View view, int snapPreference) {

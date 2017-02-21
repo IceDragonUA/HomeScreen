@@ -20,10 +20,10 @@ public class GridRecyclerView extends RecyclerView {
 
     private static final String TAG = GridRecyclerView.class.getCanonicalName();
 
-    private static final int MILLISECONDS_PER_EVENT = 150;
+    private static final int MILLISECONDS_PER_EVENT = 250;
 
     private static final int VELOCITY_START_POINT = 300;
-    private static final float VELOCITY_MAX_SPEED = 0.85f;
+    private static final float VELOCITY_MAX_SPEED = 0.76f;
 
     private int mSelectedPosition = 0;
 
@@ -137,6 +137,8 @@ public class GridRecyclerView extends RecyclerView {
                 }
             }
         });
+        setDrawingCacheEnabled(true);
+        setDrawingCacheQuality(View.DRAWING_CACHE_QUALITY_HIGH);
     }
 
     @Override
@@ -174,17 +176,22 @@ public class GridRecyclerView extends RecyclerView {
     }
 
     public void createCoordinator(List<Project> projectList) {
-        for (int i = 0; i < projectList.size(); i++){
+        for (int i = 0; i < projectList.size(); i++) {
             mCoordinator.add(0);
         }
     }
 
-    public int getItemPosition (int rowPosition) {
+    public int getItemPosition(int rowPosition) {
         return mCoordinator.get(rowPosition);
     }
 
-    public void setItemPosition (int rowPosition, int itemPosition){
+    public void setItemPosition(int rowPosition, int itemPosition) {
         mCoordinator.set(rowPosition, itemPosition);
+    }
+
+    @Override
+    public View focusSearch(View focused, int direction) {
+        return null;
     }
 
     private class VerticalSmoothScrolledLayoutManager extends LinearLayoutManager {
@@ -202,6 +209,10 @@ public class GridRecyclerView extends RecyclerView {
         public void smoothScrollToPosition(RecyclerView recyclerView,
                                            RecyclerView.State state,
                                            int position) {
+
+            if (position < 0 || position >= getItemCount()) {
+                return;
+            }
 
             LinearSmoothScroller smoothScroller = new LinearSmoothScroller(mContext) {
 
@@ -222,6 +233,11 @@ public class GridRecyclerView extends RecyclerView {
 
             smoothScroller.setTargetPosition(position);
             startSmoothScroll(smoothScroller);
+        }
+
+        @Override
+        protected int getExtraLayoutSpace(RecyclerView.State state) {
+            return getHeight() * getItemCount();
         }
     }
 

@@ -30,11 +30,18 @@ public class HomeCategoryAdapter extends RecyclerView.Adapter<HomeCategoryAdapte
     private Context context;
     private int browseListPosition = 0;
     private GridRecyclerView browseListView;
+    private RowRecyclerView categoryListView;
     private List<Asset> assetList = new ArrayList<>();
 
     public HomeCategoryAdapter(Context context, GridRecyclerView browseListView) {
         this.context = context;
         this.browseListView = browseListView;
+    }
+
+    @Override
+    public void onAttachedToRecyclerView(RecyclerView recyclerView) {
+        super.onAttachedToRecyclerView(recyclerView);
+        this.categoryListView = (RowRecyclerView) recyclerView;
     }
 
     @Override
@@ -60,6 +67,7 @@ public class HomeCategoryAdapter extends RecyclerView.Adapter<HomeCategoryAdapte
         this.assetList.clear();
         this.assetList.addAll(assetList);
         this.notifyDataSetChanged();
+        this.categoryListView.scrollToPosition(browseListView.getItemPosition(position));
     }
 
     private Asset getItem(int position) {

@@ -51,9 +51,10 @@ public class MainActivity extends Activity {
             @Override
             public void onResult(List<Project> projectList) {
                 projectList.remove(0);
-                browseList.createCoordinator(projectList);
-                browseList.setAdapter(new HomeCategoriesAdapter(projectList));
+                browseList.createCoordinator(projectList.subList(0, 15));
+                browseList.setAdapter(new HomeCategoriesAdapter(projectList.subList(0, 15)));
                 browseList.getAdapter().setOnItemPressedListener(onItemPressedListener);
+                browseList.setItemViewCacheSize(projectList.subList(0, 15).size());
                 browseList.postDelayed(new Runnable() {
                     @Override
                     public void run() {
